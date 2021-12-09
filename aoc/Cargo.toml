@@ -1,0 +1,9 @@
+[package]
+name = "aoc"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "3.0.0-rc.0", default-features = false, features = ["derive", "std"] }
+serde = { version = "1.0.131", features = ["derive"] }
+tinytemplate = "1.2.1"

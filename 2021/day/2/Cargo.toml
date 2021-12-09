@@ -1,0 +1,15 @@
+[package]
+name = "aoc-2021-day-2"
+version = "0.0.0"
+edition = "2021"
+
+[[bench]]
+name = "main"
+harness = false
+
+[dependencies]
+aoc = { path = "../../../aoc" }
+clap = { version = "3.0.0-rc.0", default-features = false, features = ["derive", "std"] }
+
+[dev-dependencies]
+criterion = "0.3.5"
