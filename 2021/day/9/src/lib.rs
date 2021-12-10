@@ -1,42 +1,157 @@
+mod coordinate;
+
+use std::collections::BTreeSet;
 use std::convert::Infallible;
+use std::ops::{Deref, Index};
 use std::str::FromStr;
+
+use crate::coordinate::Coordinate;
 
 #[derive(Debug)]
 pub struct Input(Vec<Vec<usize>>);
+
+impl Input {
+    fn basin(&self, basin: &mut BTreeSet<Coordinate>, coordinate: Coordinate) {
+        let depth = self[coordinate];
+
+        if depth == 9 {
+            return;
+        }
+
+        basin.insert(coordinate);
+
+        if coordinate.y != 0 {
+            let up = Coordinate::new(coordinate.x, coordinate.y - 1);
+
+            if !basin.contains(&up) && self[up] > depth {
+                self.basin(basin, up);
+            }
+        }
+
+        if coordinate.y != self.len() - 1 {
+            let down = Coordinate::new(coordinate.x, coordinate.y + 1);
+
+            if !basin.contains(&down) && self[down] > depth {
+                self.basin(basin, down);
+            }
+        }
+
+        if coordinate.x != 0 {
+            let left = Coordinate::new(coordinate.x - 1, coordinate.y);
+
+            if !basin.contains(&left) && self[left] > depth {
+                self.basin(basin, left);
+            }
+        }
+
+        if coordinate.x != self[coordinate.y].len() - 1 {
+            let right = Coordinate::new(coordinate.x + 1, coordinate.y);
+
+            if !basin.contains(&right) && self[right] > depth {
+                self.basin(basin, right);
+            }
+        }
+    }
+
+    fn basins(&self) -> BTreeSet<BTreeSet<Coordinate>> {
+        let mut basins = BTreeSet::new();
+
+        for coordinate in self.low_points() {
+            let mut basin = BTreeSet::new();
+            self.basin(&mut basin, coordinate);
+
+            basins.insert(basin);
+        }
+
+        basins
+    }
+
+    fn low_points(&self) -> BTreeSet<Coordinate> {
+        let mut low_points = BTreeSet::new();
+
+        for y in 0..self.len() {
+            for x in 0..self[y].len() {
+                let coordinate = Coordinate::new(x, y);
+                let depth = self[coordinate];
+
+                let up = if y == 0 {
+                    usize::MAX
+                } else {
+                    self[Coordinate::new(x, y - 1)]
+                };
+
+                let down = if y == self.len() - 1 {
+                    usize::MAX
+                } else {
+                    self[Coordinate::new(x, y + 1)]
+                };
+
+                let left = if x == 0 {
+                    usize::MAX
+                } else {
+                    self[Coordinate::new(x - 1, y)]
+                };
+
+                let right = if x == self[y].len() - 1 {
+                    usize::MAX
+                } else {
+                    self[Coordinate::new(x + 1, y)]
+                };
+
+                if depth < up && depth < down && depth < left && depth < right {
+                    low_points.insert(coordinate);
+                }
+            }
+        }
+
+        low_points
+    }
+}
+
+impl Deref for Input {
+    type Target = Vec<Vec<usize>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Index<usize> for Input {
+    type Output = Vec<usize>;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl Index<Coordinate> for Input {
+    type Output = usize;
+
+    fn index(&self, coordinate: Coordinate) -> &Self::Output {
+        &self.0[coordinate.y][coordinate.x]
+    }
+}
 
 impl aoc::Input for Input {
     type Answer = usize;
 
     fn run_part1(&self) -> Self::Answer {
-        let mut answer = 0;
-
-        for i in 0..self.0.len() {
-            for j in 0..self.0[i].len() {
-                let point = self.0[i][j];
-
-                let above = i
-                    .checked_sub(1)
-                    .and_then(|i| self.0.get(i).map(|row| row[j]))
-                    .unwrap_or(usize::MAX);
-                let below = self.0.get(i + 1).map(|row| row[j]).unwrap_or(usize::MAX);
-                let left = j
-                    .checked_sub(1)
-                    .and_then(|j| self.0[i].get(j))
-                    .copied()
-                    .unwrap_or(usize::MAX);
-                let right = self.0[i].get(j + 1).copied().unwrap_or(usize::MAX);
-
-                if point < above && point < below && point < left && point < right {
-                    answer += point + 1;
-                }
-            }
-        }
-
-        answer
+        self.low_points()
+            .into_iter()
+            .map(|coordinate| self[coordinate] + 1)
+            .sum()
     }
 
     fn run_part2(&self) -> Self::Answer {
-        todo!()
+        let mut basins = self.basins().into_iter().collect::<Vec<_>>();
+        basins.sort_by_key(|basin| basin.len());
+
+        basins
+            .into_iter()
+            .rev()
+            .take(3)
+            .map(|basin| basin.len())
+            .product()
     }
 }
 
@@ -74,10 +189,9 @@ mod tests {
         assert_eq!(parse_day_9().run_part1(), ANSWER);
     }
 
-    // #[ignore]
-    // #[test]
-    // fn run_day_9_part_2() {
-    //     const ANSWER: <Input as aoc::Input>::Answer = todo!();
-    //     assert_eq!(parse_day_9().run_part2(), ANSWER);
-    // }
+    #[test]
+    fn run_day_9_part_2() {
+        const ANSWER: <Input as aoc::Input>::Answer = 1134;
+        assert_eq!(parse_day_9().run_part2(), ANSWER);
+    }
 }
